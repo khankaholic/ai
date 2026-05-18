@@ -1,0 +1,85 @@
+[project]
+name = "ai-lab"
+version = "0.1.0"
+description = "Personal AI and machine learning learning lab"
+authors = [{ name = "Khanh HV" }]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "matplotlib>=3.8,<4",
+  "numpy>=1.26,<3",
+  "pandas>=2.2,<3",
+  "pyyaml>=6.0,<7",
+  "scikit-learn>=1.5,<2",
+  "torch>=2.1",
+  "tqdm>=4.66,<5",
+]
+
+[dependency-groups]
+dev = [
+  "ipykernel>=6.29,<7",
+  "mypy>=1.17,<2",
+  "notebook>=7.0,<8",
+  "pytest>=8.0,<9",
+  "pytest-cov>=6.0,<7",
+  "ruff>=0.12,<1",
+]
+
+[tool.uv]
+package = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[tool.uv.sources]
+torch = [
+  { index = "pypi", marker = "sys_platform == 'darwin'" },
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_lab"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "README.md",
+  "src/ai_lab",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = "test_*.py"
+addopts = "-ra --maxfail=5"
+
+[tool.coverage.run]
+branch = true
+source = ["src/ai_lab"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+explicit_package_bases = true
+packages = ["ai_lab"]
