@@ -1,4 +1,4 @@
-.PHONY: setup sync test lint format notebook
+.PHONY: setup sync test lint format precommit notebook
 
 UV := env -u VIRTUAL_ENV uv
 
@@ -18,6 +18,9 @@ lint:
 format:
 	$(UV) run ruff format .
 	$(UV) run ruff check --fix .
+
+precommit:
+	$(UV) run pre-commit run --all-files
 
 notebook:
 	$(UV) run jupyter notebook

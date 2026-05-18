@@ -35,6 +35,18 @@ uv run ruff format .
 uv run ruff check .
 ```
 
+Install local commit hooks:
+
+```bash
+uv run pre-commit install
+```
+
+Run hooks manually:
+
+```bash
+make precommit
+```
+
 ## GitHub Workflows
 
 - `CI`: runs lint, type checking, and tests on pushes to `main`, pull requests, and manual dispatch.

@@ -19,6 +19,7 @@ dev = [
   "ipykernel>=6.29,<7",
   "mypy>=1.17,<2",
   "notebook>=7.0,<8",
+  "pre-commit>=4.0,<5",
   "pytest>=8.0,<9",
   "pytest-cov>=6.0,<7",
   "ruff>=0.12,<1",
