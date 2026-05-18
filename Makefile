@@ -20,7 +20,7 @@ format:
 	$(UV) run ruff check --fix .
 
 precommit:
-	$(UV) run pre-commit run --all-files
+	SKIP=no-commit-to-branch $(UV) run pre-commit run --all-files
 
 notebook:
 	$(UV) run jupyter notebook
