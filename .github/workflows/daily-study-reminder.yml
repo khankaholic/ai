@@ -1,0 +1,218 @@
+name: Daily Study Reminder
+
+on:
+  schedule:
+    # 00:00 UTC is 07:00 in Vietnam.
+    - cron: "0 0 * * *"
+    # 13:00 UTC is 20:00 in Vietnam.
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Reminder mode to run"
+        required: false
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - morning
+          - evening
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  remind:
+    name: Create daily reminder issue
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send GitHub reminder
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const studentUsername = "khankaholic";
+            const timezone = "Asia/Ho_Chi_Minh";
+            const studyLabel = "study-reminder";
+            const dailyLabel = "daily-study";
+
+            const now = new Date();
+            const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+              timeZone: timezone,
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            });
+            const hourFormatter = new Intl.DateTimeFormat("en-US", {
+              timeZone: timezone,
+              hour: "2-digit",
+              hour12: false,
+            });
+
+            const today = dateFormatter.format(now);
+            const localHour = Number(hourFormatter.format(now));
+            const requestedMode = "${{ github.event.inputs.mode || 'auto' }}";
+            const mode = requestedMode === "auto"
+              ? (localHour < 12 ? "morning" : "evening")
+              : requestedMode;
+
+            const title = `AI study reminder - ${today}`;
+            const morningMarker = `<!-- study-reminder:morning:${today} -->`;
+            const eveningMarker = `<!-- study-reminder:evening:${today} -->`;
+
+            const issueBody = [
+              `# Daily AI Study - ${today}`,
+              "",
+              "Pick one small thing from `notes/learning_backlog.md`.",
+              "",
+              "Reply to this issue after studying. A short response is enough:",
+              "",
+              "```text",
+              "Done:",
+              "Next:",
+              "Blocked:",
+              "```",
+            ].join("\n");
+
+            const morningBody = [
+              morningMarker,
+              "",
+              "Morning check-in.",
+              "",
+              "Pick one small thing:",
+              "",
+              "- one concept notebook",
+              "- one small project task",
+              "- one backlog cleanup",
+              "",
+              "Reply here after you study.",
+            ].join("\n");
+
+            const eveningBody = [
+              eveningMarker,
+              "",
+              "Evening follow-up.",
+              "",
+              "No reply after the morning reminder yet. Do a tiny session:",
+              "",
+              "- read one concept",
+              "- write one note",
+              "- run one notebook cell",
+            ].join("\n");
+
+            const { owner, repo } = context.repo;
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name,
+                  color,
+                  description,
+                });
+              }
+            }
+
+            await ensureLabel(studyLabel, "2f80ed", "Study reminder");
+            await ensureLabel(dailyLabel, "0e8a16", "Daily learning log");
+
+            const issues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              labels: `${studyLabel},${dailyLabel}`,
+              per_page: 100,
+            });
+
+            let issue = issues.data.find((item) => item.title === title);
+
+            if (!issue) {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body: issueBody,
+                labels: [studyLabel, dailyLabel],
+              });
+              issue = created.data;
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: issue.number,
+              per_page: 100,
+            });
+
+            const hasMorningReminder = comments.some((comment) =>
+              comment.body.includes(morningMarker)
+            );
+            const hasEveningReminder = comments.some((comment) =>
+              comment.body.includes(eveningMarker)
+            );
+
+            if (mode === "morning") {
+              if (hasMorningReminder) {
+                core.info("Morning reminder already exists for today.");
+                return;
+              }
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: morningBody,
+              });
+              return;
+            }
+
+            if (mode !== "evening") {
+              throw new Error(`Unsupported reminder mode: ${mode}`);
+            }
+
+            const morningComment = comments.find((comment) =>
+              comment.body.includes(morningMarker)
+            );
+
+            if (!morningComment) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: morningBody,
+              });
+              core.info("Morning reminder was missing, so it was created.");
+              return;
+            }
+
+            const morningCreatedAt = new Date(morningComment.created_at);
+            const hasStudentResponse = comments.some((comment) => {
+              const isStudent = comment.user?.login === studentUsername;
+              const isAfterMorning = new Date(comment.created_at) > morningCreatedAt;
+              const isAutomationMarker = comment.body.includes("<!-- study-reminder:");
+              return isStudent && isAfterMorning && !isAutomationMarker;
+            });
+
+            if (hasStudentResponse) {
+              core.info(`${studentUsername} responded after the morning reminder.`);
+              return;
+            }
+
+            if (hasEveningReminder) {
+              core.info("Evening reminder already exists for today.");
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issue.number,
+              body: eveningBody,
+            });

@@ -1,0 +1,43 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Environments
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local data and generated outputs
+data/*
+!data/samples/
+!data/samples/.gitkeep
+
+artifacts/*
+!artifacts/.gitkeep
+
+# Model artifacts
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+
+# Logs and experiment trackers
+logs/
+wandb/
+mlruns/
+runs/
